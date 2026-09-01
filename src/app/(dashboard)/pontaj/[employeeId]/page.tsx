@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { daysInMonth, LUNI_RO } from "@/lib/pontaj-calc";
 import { TimesheetEditor } from "./editor";
 
@@ -34,12 +35,32 @@ export default async function EmployeeTimesheetPage({
 
   const { data: timesheet } = await supabase
     .from("timesheets")
-    .select("id, status, timesheet_days(*)")
+    .select("id, status, updated_at, updated_by, timesheet_days(*)")
     .eq("center_id", centerId)
     .eq("employee_id", employeeId)
     .eq("an", an)
     .eq("luna", luna)
     .maybeSingle();
+
+  // Numele ultimului editor: profiles nu e vizibil pentru alți utilizatori prin RLS
+  // (fiecare își vede doar propriul profil, în afară de admin), așa că folosim clientul
+  // cu drepturi depline doar pentru acest lookup punctual — utilizatorul curent e deja
+  // verificat mai sus că are acces la acest pontaj.
+  let updatedByName: string | null = null;
+  if (timesheet?.updated_by) {
+    try {
+      const admin = createAdminClient();
+      const { data: editorProfile } = await admin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", timesheet.updated_by)
+        .single();
+      updatedByName = editorProfile?.full_name ?? null;
+    } catch {
+      // SUPABASE_SERVICE_ROLE_KEY lipsă din mediu — pur și simplu nu afișăm numele editorului.
+      updatedByName = null;
+    }
+  }
 
   const totalZile = daysInMonth(an, luna);
   const existingDays = new Map(
@@ -85,6 +106,8 @@ export default async function EmployeeTimesheetPage({
         absenceCodes={absenceCodes ?? []}
         status={(timesheet?.status as "in_lucru" | "finalizat") ?? "in_lucru"}
         canFinalize={true}
+        updatedByName={updatedByName}
+        updatedAt={timesheet?.updated_at ?? null}
       />
     </div>
   );

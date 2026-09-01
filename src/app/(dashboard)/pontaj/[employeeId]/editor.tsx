@@ -12,6 +12,8 @@ export function TimesheetEditor({
   initialDays,
   absenceCodes,
   status: initialStatus,
+  updatedByName,
+  updatedAt,
 }: {
   centerId: string;
   employeeId: string;
@@ -21,6 +23,8 @@ export function TimesheetEditor({
   absenceCodes: { code: string; label: string }[];
   status: "in_lucru" | "finalizat";
   canFinalize: boolean;
+  updatedByName?: string | null;
+  updatedAt?: string | null;
 }) {
   const [days, setDays] = useState<DayInput[]>(initialDays);
   const [status, setStatus] = useState(initialStatus);
@@ -111,6 +115,19 @@ export function TimesheetEditor({
         >
           {status === "finalizat" ? "Finalizat" : "În lucru"}
         </span>
+
+        {updatedByName && updatedAt && (
+          <span className="text-xs text-slate-400">
+            Ultima editare: {updatedByName} ·{" "}
+            {new Date(updatedAt).toLocaleString("ro-RO", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        )}
 
         <div className="flex gap-2">
           {message && <span className="self-center text-sm text-slate-500">{message}</span>}

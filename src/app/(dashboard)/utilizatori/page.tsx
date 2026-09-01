@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CreateUserForm } from "./create-user-form";
 import { UserRow } from "./user-row";
 
@@ -20,6 +21,19 @@ export default async function UtilizatoriPage() {
     centersByProfile.set(a.profile_id, list);
   }
 
+  // Emailul nu e stocat în profiles (doar în auth.users), deci îl luăm separat
+  // cu clientul cu drepturi depline — pagina asta e oricum accesibilă doar adminilor.
+  const emailByProfile = new Map<string, string>();
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    for (const u of data?.users ?? []) {
+      if (u.email) emailByProfile.set(u.id, u.email);
+    }
+  } catch {
+    // SUPABASE_SERVICE_ROLE_KEY lipsă din mediu — pur și simplu nu afișăm emailurile.
+  }
+
   return (
     <div>
       <h1 className="text-lg font-semibold text-slate-900">Utilizatori</h1>
@@ -37,6 +51,7 @@ export default async function UtilizatoriPage() {
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
               <th className="px-4 py-2 font-medium">Nume</th>
+              <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Rol</th>
               <th className="px-4 py-2 font-medium">Centre</th>
               <th className="px-4 py-2"></th>
@@ -47,6 +62,7 @@ export default async function UtilizatoriPage() {
               <UserRow
                 key={p.id}
                 profile={p}
+                email={emailByProfile.get(p.id) ?? null}
                 centers={centers ?? []}
                 assignedCenterIds={centersByProfile.get(p.id) ?? []}
               />

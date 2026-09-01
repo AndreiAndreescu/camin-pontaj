@@ -59,6 +59,7 @@ export interface TimesheetRow {
   status: TimesheetStatus;
   created_at: string;
   updated_at: string;
+  updated_by: string | null;
 }
 
 export interface TimesheetDayRow {

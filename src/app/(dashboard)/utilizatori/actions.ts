@@ -72,6 +72,34 @@ export async function updateUserCenters(formData: FormData) {
   return { error: null };
 }
 
+export async function updateUserEmail(formData: FormData) {
+  await requireAdmin();
+
+  const userId = String(formData.get("userId") ?? "");
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!userId || !email) {
+    return { error: "Date lipsă." };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e: any) {
+    return { error: e.message };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email,
+    email_confirm: true,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/utilizatori");
+  return { error: null };
+}
+
 export async function resetUserPassword(formData: FormData) {
   await requireAdmin();
   const userId = String(formData.get("userId") ?? "");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateUserCenters, resetUserPassword } from "./actions";
+import { updateUserCenters, resetUserPassword, updateUserEmail } from "./actions";
 
 interface Profile {
   id: string;
@@ -11,15 +11,18 @@ interface Profile {
 
 export function UserRow({
   profile,
+  email,
   centers,
   assignedCenterIds,
 }: {
   profile: Profile;
+  email: string | null;
   centers: { id: string; nume: string }[];
   assignedCenterIds: string[];
 }) {
   const [editingCenters, setEditingCenters] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -32,6 +35,7 @@ export function UserRow({
     <>
       <tr>
         <td className="px-4 py-2 text-slate-900">{profile.full_name}</td>
+        <td className="px-4 py-2 text-slate-600">{email ?? "—"}</td>
         <td className="px-4 py-2 text-slate-600">{profile.role === "admin" ? "Admin" : "Șef de centru"}</td>
         <td className="px-4 py-2 text-slate-600">
           {profile.role === "admin" ? "Toate" : assignedNames || "—"}
@@ -46,6 +50,12 @@ export function UserRow({
             </button>
           )}
           <button
+            onClick={() => setEditingEmail((v) => !v)}
+            className="mr-3 font-medium text-indigo-600 hover:text-indigo-500"
+          >
+            Email
+          </button>
+          <button
             onClick={() => setResettingPassword((v) => !v)}
             className="font-medium text-slate-600 hover:text-slate-500"
           >
@@ -56,7 +66,7 @@ export function UserRow({
 
       {editingCenters && (
         <tr>
-          <td colSpan={4} className="bg-slate-50 px-4 py-3">
+          <td colSpan={5} className="bg-slate-50 px-4 py-3">
             <form
               action={(formData) =>
                 startTransition(async () => {
@@ -93,9 +103,45 @@ export function UserRow({
         </tr>
       )}
 
+      {editingEmail && (
+        <tr>
+          <td colSpan={5} className="bg-slate-50 px-4 py-3">
+            <form
+              action={(formData) =>
+                startTransition(async () => {
+                  const res = await updateUserEmail(formData);
+                  setMessage(res.error ?? "Email actualizat.");
+                  if (!res.error) setEditingEmail(false);
+                })
+              }
+              className="flex items-end gap-2"
+            >
+              <input type="hidden" name="userId" value={profile.id} />
+              <div>
+                <label className="block text-xs text-slate-500">Email nou</label>
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={email ?? ""}
+                  required
+                  className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+              >
+                Salvează
+              </button>
+            </form>
+          </td>
+        </tr>
+      )}
+
       {resettingPassword && (
         <tr>
-          <td colSpan={4} className="bg-slate-50 px-4 py-3">
+          <td colSpan={5} className="bg-slate-50 px-4 py-3">
             <form
               action={(formData) =>
                 startTransition(async () => {
@@ -125,7 +171,7 @@ export function UserRow({
 
       {message && (
         <tr>
-          <td colSpan={4} className="px-4 pb-2 text-xs text-slate-400">
+          <td colSpan={5} className="px-4 pb-2 text-xs text-slate-400">
             {message}
           </td>
         </tr>

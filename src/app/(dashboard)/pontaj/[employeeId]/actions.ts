@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 
 export interface DayInput {
   ziua: number;
@@ -28,6 +29,7 @@ export async function saveTimesheet({
   luna: number;
   days: DayInput[];
 }) {
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data: existing } = await supabase
@@ -48,7 +50,7 @@ export async function saveTimesheet({
   if (!timesheetId) {
     const { data: created, error } = await supabase
       .from("timesheets")
-      .insert({ center_id: centerId, employee_id: employeeId, an, luna })
+      .insert({ center_id: centerId, employee_id: employeeId, an, luna, updated_by: user.id })
       .select("id")
       .single();
 
@@ -59,7 +61,7 @@ export async function saveTimesheet({
   } else {
     await supabase
       .from("timesheets")
-      .update({ updated_at: new Date().toISOString() })
+      .update({ updated_at: new Date().toISOString(), updated_by: user.id })
       .eq("id", timesheetId);
   }
 
@@ -102,11 +104,12 @@ export async function setTimesheetStatus({
   luna: number;
   status: "in_lucru" | "finalizat";
 }) {
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("timesheets")
-    .update({ status })
+    .update({ status, updated_by: user.id })
     .eq("center_id", centerId)
     .eq("employee_id", employeeId)
     .eq("an", an)
